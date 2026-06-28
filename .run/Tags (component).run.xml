@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Tags (component)" type="JUnit" factoryName="JUnit" nameIsGenerated="true">
+    <module name="demo" />
+    <option name="MAIN_CLASS_NAME" value="" />
+    <option name="METHOD_NAME" value="" />
+    <option name="TEST_OBJECT" value="tags" />
+    <dir value="$PROJECT_DIR$/src/test/java/com/example/demo" />
+    <tag value="component" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+      <option name="Maven.BeforeRunTask" enabled="true" file="$PROJECT_DIR$/pom.xml" goal="spring-boot:build-image -DskipTests=true" />
+    </method>
+  </configuration>
+</component>
