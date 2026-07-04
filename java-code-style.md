@@ -1,0 +1,3 @@
+- Use `var` only when the inferred type is obvious.
+- Never use `final` on local variables or method parameters.
+- Never use access modifiers in tests.
