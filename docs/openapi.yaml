@@ -1,0 +1,1056 @@
+openapi: 3.2.0
+info:
+  title: Jira Cloud platform REST API — Projects resource
+  version: "3.0.0"
+  description: >
+    Subset of the Jira Cloud platform REST API (v3) covering the "Projects"
+    resource group only, as documented at
+    https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-projects
+  license:
+    name: Apache 2.0
+    identifier: Apache-2.0
+servers:
+  - url: https://{cloudId}.atlassian.net
+    name: jira-cloud
+    description: Jira Cloud site base URL
+    variables:
+      cloudId:
+        default: your-domain
+        description: Your Jira Cloud site name
+
+tags:
+  - name: Projects
+    summary: Create, retrieve, update, delete, archive, and restore projects.
+    kind: nav
+
+security:
+  - basicAuth: []
+  - oauth2: []
+
+paths:
+
+  /rest/api/3/project:
+    get:
+      operationId: getAllProjects
+      summary: Get all projects
+      description: >
+        Returns all projects visible to the user.
+        Deprecated — use "Get projects paginated" instead.
+      deprecated: true
+      tags: [Projects]
+      parameters:
+        - name: expand
+          in: query
+          schema:
+            type: string
+          description: A comma-separated list of expand options (description, issueTypes, lead, projectKeys, url, permissions, insight).
+        - name: recent
+          in: query
+          schema:
+            type: integer
+          description: Returns the user's most recently accessed projects, up to this number.
+        - name: properties
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          description: A list of project properties to return for the project.
+      responses:
+        "200":
+          description: Returned if the request is successful.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      operationId: createProject
+      summary: Create project
+      description: >
+        Creates a project based on a project type template.
+      tags: [Projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectDetails"
+      responses:
+        "201":
+          description: Returned if the project is created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectIdentifiers"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /rest/api/3/project/recent:
+    get:
+      operationId: getRecentProjects
+      summary: Get recent projects
+      description: >
+        Returns a list of up to 20 projects recently viewed by the user,
+        ordered by most recently to least recently viewed.
+      tags: [Projects]
+      parameters:
+        - name: expand
+          in: query
+          schema:
+            type: string
+        - name: properties
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+      responses:
+        "200":
+          description: Returned if the request is successful.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /rest/api/3/project/search:
+    get:
+      operationId: searchProjects
+      summary: Get projects paginated
+      description: >
+        Returns a paginated list of projects visible to the user, with
+        support for text search, category/type filtering, and ordering.
+      tags: [Projects]
+      parameters:
+        - name: startAt
+          in: query
+          schema:
+            type: integer
+            format: int64
+            default: 0
+        - name: maxResults
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: orderBy
+          in: query
+          schema:
+            type: string
+            enum:
+              - category
+              - -category
+              - +category
+              - key
+              - -key
+              - +key
+              - name
+              - -name
+              - +name
+              - owner
+              - -owner
+              - +owner
+              - issueCount
+              - -issueCount
+              - +issueCount
+              - lastIssueUpdatedTime
+              - -lastIssueUpdatedTime
+              - +lastIssueUpdatedTime
+              - archivedDate
+              - -archivedDate
+              - +archivedDate
+              - deletedDate
+              - -deletedDate
+              - +deletedDate
+            default: key
+        - name: id
+          in: query
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+          style: form
+          explode: true
+          description: The project IDs to filter the results by.
+        - name: keys
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: query
+          in: query
+          schema:
+            type: string
+          description: Filter the results using a literal string; matches key or name (case-insensitive).
+        - name: typeKey
+          in: query
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [view, browse, edit, create]
+            default: view
+        - name: expand
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [live, archived, deleted]
+          style: form
+          explode: true
+        - name: properties
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - name: propertyQuery
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returned if the request is successful.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageBeanProject"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /rest/api/3/project/{projectIdOrKey}:
+    parameters:
+      - name: projectIdOrKey
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The project ID or project key (case-sensitive).
+    get:
+      operationId: getProject
+      summary: Get project
+      description: Returns the project details for a project.
+      tags: [Projects]
+      parameters:
+        - name: expand
+          in: query
+          schema:
+            type: string
+        - name: properties
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+      responses:
+        "200":
+          description: Returned if the request is successful.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      operationId: updateProject
+      summary: Update project
+      description: Updates the project details of a project.
+      tags: [Projects]
+      parameters:
+        - name: expand
+          in: query
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectDetails"
+      responses:
+        "200":
+          description: Returned if the project is updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteProject
+      summary: Delete project
+      description: >
+        Deletes a project. Cannot delete an archived project — restore it
+        first. Requires Administer Jira global permission.
+      tags: [Projects]
+      parameters:
+        - name: enableUndo
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Whether this project is placed in the Jira recycle bin, where it is available for restoration.
+      responses:
+        "204":
+          description: Returned if the project is deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rest/api/3/project/{projectIdOrKey}/archive:
+    post:
+      operationId: archiveProject
+      summary: Archive project
+      description: >
+        Archives a project. Archived projects cannot be deleted directly;
+        restore first. Requires Administer Jira global permission.
+      tags: [Projects]
+      parameters:
+        - name: projectIdOrKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returned if the project is archived.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rest/api/3/project/{projectIdOrKey}/delete:
+    post:
+      operationId: deleteProjectAsynchronously
+      summary: Delete project asynchronously
+      description: >
+        Deletes a project asynchronously. Transactional: if any part of the
+        delete fails the project is not deleted. Follow the `location`
+        header in the response to poll task status via "Get task".
+      tags: [Projects]
+      parameters:
+        - name: projectIdOrKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "303":
+          description: Returned if the request is successful.
+          headers:
+            location:
+              schema:
+                type: string
+              description: The URL to use to check the status of the delete task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskProgressBeanObject"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rest/api/3/project/{projectIdOrKey}/restore:
+    post:
+      operationId: restoreDeletedOrArchivedProject
+      summary: Restore deleted or archived project
+      description: >
+        Restores a project that has been archived or placed in the Jira
+        recycle bin. Requires Administer Jira global permission.
+      tags: [Projects]
+      parameters:
+        - name: projectIdOrKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returned if the project is restored.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rest/api/3/project/{projectIdOrKey}/statuses:
+    get:
+      operationId: getAllStatuses
+      summary: Get all statuses for project
+      description: >
+        Returns the valid statuses for a project, grouped by issue type
+        (each issue type has its own workflow and, hence, set of statuses).
+      tags: [Projects]
+      parameters:
+        - name: projectIdOrKey
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returned if the request is successful.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IssueTypeWithStatus"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rest/api/3/project/{projectId}/hierarchy:
+    get:
+      operationId: getProjectIssueTypeHierarchy
+      summary: Get project issue type hierarchy
+      description: Returns the issue type hierarchy for a next-gen project.
+      tags: [Projects]
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Returned if the request is successful.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectIssueTypeHierarchy"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /rest/api/3/project/{projectKeyOrId}/notificationscheme:
+    get:
+      operationId: getNotificationSchemeForProject
+      summary: Get project notification scheme
+      description: >
+        Gets a notification scheme associated with the project.
+        Returns a default notification scheme if no scheme is assigned.
+      tags: [Projects]
+      parameters:
+        - name: projectKeyOrId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: expand
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Returned if the request is successful.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationScheme"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.atlassian.com/authorize
+          tokenUrl: https://auth.atlassian.com/oauth/token
+          scopes:
+            read:jira-work: Read project and issue data
+            write:jira-work: Create and edit projects and issues
+            manage:jira-project: Administer projects
+            read:project:jira: Read project details (granular)
+
+  responses:
+    BadRequest:
+      description: Returned if the request is not valid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorCollection"
+    Unauthorized:
+      description: Returned if the authentication credentials are incorrect or missing.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorCollection"
+    Forbidden:
+      description: Returned if the user does not have the necessary permission.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorCollection"
+    NotFound:
+      description: Returned if the project is not found or the user does not have permission to view it.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorCollection"
+
+  schemas:
+
+    ErrorCollection:
+      type: object
+      properties:
+        errorMessages:
+          type: array
+          items:
+            type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+        status:
+          type: integer
+
+    AvatarUrlsBean:
+      type: object
+      properties:
+        "16x16":
+          type: string
+          format: uri
+        "24x24":
+          type: string
+          format: uri
+        "32x32":
+          type: string
+          format: uri
+        "48x48":
+          type: string
+          format: uri
+
+    UserDetails:
+      type: object
+      properties:
+        self:
+          type: string
+          format: uri
+        accountId:
+          type: string
+        accountType:
+          type: string
+        displayName:
+          type: string
+        active:
+          type: boolean
+        avatarUrls:
+          $ref: "#/components/schemas/AvatarUrlsBean"
+
+    ProjectCategory:
+      type: object
+      properties:
+        self:
+          type: string
+          format: uri
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+
+    SimplifiedIssueTypeScheme:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+
+    ProjectComponentSummary:
+      type: object
+      properties:
+        self:
+          type: string
+          format: uri
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+
+    ProjectVersionSummary:
+      type: object
+      properties:
+        self:
+          type: string
+          format: uri
+        id:
+          type: string
+        name:
+          type: string
+        archived:
+          type: boolean
+        released:
+          type: boolean
+
+    ProjectLandingPageInfo:
+      type: object
+      properties:
+        url:
+          type: string
+        projectKey:
+          type: string
+        boardId:
+          type: integer
+          format: int64
+        projectType:
+          type: string
+        simplified:
+          type: boolean
+
+    ProjectPermissions:
+      type: object
+      properties:
+        canEdit:
+          type: boolean
+
+    ProjectInsight:
+      type: object
+      properties:
+        totalIssueCount:
+          type: integer
+          format: int64
+        lastIssueUpdateTime:
+          type: string
+          format: date-time
+
+    Project:
+      type: object
+      description: Details about a project.
+      properties:
+        self:
+          type: string
+          format: uri
+        id:
+          type: string
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        projectTypeKey:
+          type: string
+          enum: [software, service_desk, business]
+        simplified:
+          type: boolean
+        style:
+          type: string
+          enum: [classic, next-gen]
+        isPrivate:
+          type: boolean
+        assigneeType:
+          type: string
+          enum: [PROJECT_LEAD, UNASSIGNED]
+        entityId:
+          type: string
+          format: uuid
+        uuid:
+          type: string
+          format: uuid
+        archived:
+          type: boolean
+        archivedDate:
+          type: string
+          format: date-time
+        archivedBy:
+          $ref: "#/components/schemas/UserDetails"
+        deleted:
+          type: boolean
+        deletedDate:
+          type: string
+          format: date-time
+        deletedBy:
+          $ref: "#/components/schemas/UserDetails"
+        retentionTillDate:
+          type: string
+          format: date-time
+        lead:
+          $ref: "#/components/schemas/UserDetails"
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectComponentSummary"
+        issueTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SimplifiedIssueTypeScheme"
+        url:
+          type: string
+        email:
+          type: string
+        avatarUrls:
+          $ref: "#/components/schemas/AvatarUrlsBean"
+        projectCategory:
+          $ref: "#/components/schemas/ProjectCategory"
+        landingPageInfo:
+          $ref: "#/components/schemas/ProjectLandingPageInfo"
+        versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectVersionSummary"
+        roles:
+          type: object
+          additionalProperties:
+            type: string
+            format: uri
+        permissions:
+          $ref: "#/components/schemas/ProjectPermissions"
+        insight:
+          $ref: "#/components/schemas/ProjectInsight"
+        favourite:
+          type: boolean
+        properties:
+          type: object
+          additionalProperties: {}
+      required:
+        - key
+        - projectTypeKey
+
+    CreateProjectDetails:
+      type: object
+      description: Details about the project to be created.
+      properties:
+        key:
+          type: string
+          description: Project key, uppercase letters and digits, must start with a letter, 2–10 characters.
+        name:
+          type: string
+        projectTypeKey:
+          type: string
+          enum: [software, service_desk, business]
+        projectTemplateKey:
+          type: string
+        description:
+          type: string
+        leadAccountId:
+          type: string
+        url:
+          type: string
+        assigneeType:
+          type: string
+          enum: [PROJECT_LEAD, UNASSIGNED]
+        avatarId:
+          type: integer
+          format: int64
+        issueSecurityScheme:
+          type: integer
+          format: int64
+        permissionScheme:
+          type: integer
+          format: int64
+        notificationScheme:
+          type: integer
+          format: int64
+        categoryId:
+          type: integer
+          format: int64
+        workflowScheme:
+          type: integer
+          format: int64
+        issueTypeScreenScheme:
+          type: integer
+          format: int64
+        issueTypeScheme:
+          type: integer
+          format: int64
+        fieldConfigurationScheme:
+          type: integer
+          format: int64
+      required:
+        - key
+        - name
+        - projectTypeKey
+        - leadAccountId
+
+    UpdateProjectDetails:
+      type: object
+      description: >
+        Details of the changes to make to the project. Any field omitted
+        from the request is not changed.
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        leadAccountId:
+          type: string
+        url:
+          type: string
+        assigneeType:
+          type: string
+          enum: [PROJECT_LEAD, UNASSIGNED]
+        avatarId:
+          type: integer
+          format: int64
+        issueSecurityScheme:
+          type: integer
+          format: int64
+        permissionScheme:
+          type: integer
+          format: int64
+        notificationScheme:
+          type: integer
+          format: int64
+        categoryId:
+          type: integer
+          format: int64
+        projectTypeKey:
+          type: string
+          enum: [software, service_desk, business]
+
+    ProjectIdentifiers:
+      type: object
+      description: Identifiers for a project.
+      properties:
+        self:
+          type: string
+          format: uri
+        id:
+          type: string
+        key:
+          type: string
+      required:
+        - self
+        - id
+        - key
+
+    PageBeanProject:
+      type: object
+      description: A page of Project objects.
+      properties:
+        self:
+          type: string
+          format: uri
+        nextPage:
+          type: string
+          format: uri
+        maxResults:
+          type: integer
+        startAt:
+          type: integer
+          format: int64
+        total:
+          type: integer
+          format: int64
+        isLast:
+          type: boolean
+        values:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+
+    StatusDetails:
+      type: object
+      properties:
+        self:
+          type: string
+          format: uri
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        iconUrl:
+          type: string
+        statusCategory:
+          type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            key:
+              type: string
+            colorName:
+              type: string
+            name:
+              type: string
+
+    IssueTypeWithStatus:
+      type: object
+      description: List of status names and the issue types they apply to, grouped by issue type.
+      properties:
+        self:
+          type: string
+          format: uri
+        id:
+          type: string
+        name:
+          type: string
+        subtask:
+          type: boolean
+        statuses:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusDetails"
+
+    ProjectIssueTypeHierarchyLevel:
+      type: object
+      properties:
+        entityId:
+          type: string
+          format: uuid
+        level:
+          type: integer
+        name:
+          type: string
+        projectConfigurationId:
+          type: string
+
+    ProjectIssueTypeHierarchy:
+      type: object
+      properties:
+        projectId:
+          type: integer
+          format: int64
+        hierarchy:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectIssueTypeHierarchyLevel"
+
+    NotificationSchemeEventDetail:
+      type: object
+      properties:
+        event:
+          type: object
+          properties:
+            id:
+              type: integer
+              format: int64
+            name:
+              type: string
+            description:
+              type: string
+        notifications:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                format: int64
+              notificationType:
+                type: string
+              parameter:
+                type: string
+
+    NotificationScheme:
+      type: object
+      description: Details about a notification scheme.
+      properties:
+        self:
+          type: string
+          format: uri
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        scope:
+          type: object
+          properties:
+            type:
+              type: string
+            project:
+              type: object
+              properties:
+                id:
+                  type: string
+        notificationSchemeEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationSchemeEventDetail"
+
+    TaskProgressBeanObject:
+      type: object
+      description: Details about a long-running asynchronous task.
+      properties:
+        self:
+          type: string
+          format: uri
+        id:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [ENQUEUED, RUNNING, COMPLETE, FAILED, CANCEL_REQUESTED, CANCELLED, DEAD]
+        message:
+          type: string
+        result: {}
+        submittedBy:
+          type: integer
+          format: int64
+        progress:
+          type: integer
+        elapsedRuntime:
+          type: integer
+          format: int64
+        submitted:
+          type: integer
+          format: int64
+        started:
+          type: integer
+          format: int64
+        finished:
+          type: integer
+          format: int64
+        lastUpdate:
+          type: integer
+          format: int64
